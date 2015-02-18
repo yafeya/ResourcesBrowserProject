@@ -1,0 +1,145 @@
+﻿<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <title></title>
+    <link rel="stylesheet" href="jquery-ui/jquery-ui.css">
+    <script src="jquery-ui/external/jquery/jquery.js"></script>
+    <script src="jquery-ui/jquery-ui.js"></script>
+
+    <style>
+        #feedback {
+            font-size: 1em;
+        }
+
+        #selectable .ui-selecting {
+            background: #FECA40;
+        }
+
+        #selectable .ui-selected {
+            background: #F39814;
+            color: white;
+        }
+
+        #selectable {
+            list-style-type: none;
+            margin: 0;
+            padding: 0;
+            width: 100%;
+        }
+
+            #selectable li {
+                margin: 3px;
+                padding: 1px;
+                float: left;
+                width: 150px;
+                height: 180px;
+                font-size: 1em;
+                align-content: center;
+            }
+
+                #selectable li img {
+                    width: 120px;
+                    height: 120px;
+                }
+
+                #selectable li div {
+                    text-align: center;
+                    width: 120px;
+                }
+    </style>
+
+    <script>
+        var _navControl = new navigtionController();
+
+        $(function () {
+            _navControl.canBack = false;
+            _navControl.currentUrl = '/Resources';
+
+            $("#btnBack").button({ disabled: true }).click(function (event) {
+                $.ajax({
+                    url: 'api/Resources/GetBackUri',
+                    type: 'GET',
+                    contentType: 'application/json',
+                    data: { currentUri: _navControl.currentUrl },
+                    success: function (result) {
+                        openFolder(result);
+                    }
+                });
+            }).text("Back");
+
+            $.ajax({
+                url: 'api/Resources/GetResourceItemsInRoot',
+                type: 'GET',
+                contentType: 'application/json',
+                success: function (result) {
+                    loadResourceItems(result);
+                }
+            });
+        })
+
+        function buildItemLi(item) {
+            var img = $('<img/>').attr('src', item.ImgUri);
+            var label = $('<label/>').text(item.Name);
+            var labelDiv = $('<div/>').append(label);
+            var btn = $('<button/>').text('Open').click(function (event) {
+                if (item.Type == 1) {
+                    window.open(item.Uri, '_blank');
+                }
+                else {
+                    openFolder(item.Uri);
+                }
+            });
+            var btnDiv = $('<div/>').append(btn);
+
+            var li = $('<li/>').append(img).append(labelDiv).append(btnDiv);
+            return li;
+        }
+
+        function openFolder(uri) {
+            updateUIStatus(uri);
+
+            $.ajax({
+                url: 'api/Resources/GetResourceItemsByPath',
+                type: 'GET',
+                contentType: 'application/json',
+                data: { folderUri: uri },
+                success: function (result) {
+                    loadResourceItems(result);
+                }
+            })
+        }
+
+        function loadResourceItems(result) {
+            $.each(result, function (key, item) {
+                var li = buildItemLi(item);
+                li.appendTo('#selectable');
+            })
+        }
+
+        function updateUIStatus(uri) {
+            $('#selectable').empty();
+            _navControl.currentUrl = uri;
+            if (uri == '/Resources') {
+                _navControl.canBack = false;
+            }
+            else {
+                _navControl.canBack = true;
+            }
+            $("#btnBack").button({ disabled: !_navControl.canBack });
+        }
+
+        function navigtionController() {
+            this.canBack = false;
+            this.currentUrl = '';
+        }
+    </script>
+</head>
+<body>
+    <div>
+        <button id="btnBack" style="width:84px; height:48px" />
+    </div>
+    <div>
+        <ol id="selectable"></ol>
+    </div>
+</body>
+</html>
